@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZplHelper/ZplHelper.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZplHelper.Tests/ZplHelper.Tests.csproj" />
+  </Folder>
+</Solution>

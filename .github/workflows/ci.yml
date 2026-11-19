@@ -1,0 +1,80 @@
+name: Build, test and release
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to nuget.org
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore and audit library dependencies
+        run: dotnet restore src/ZplHelper -p:NuGetAuditMode=all "-warnaserror:NU1900,NU1901,NU1902,NU1903,NU1904,NU1905"
+      - name: Pack
+        run: dotnet pack src/ZplHelper -c Release --no-restore -o artifacts
+      - name: Test the NuGet package
+        run: |
+          $version = dotnet msbuild src/ZplHelper/ZplHelper.csproj -getProperty:PackageVersion
+          $project = "tests/ZplHelper.Tests/ZplHelper.Tests.csproj"
+          dotnet test $project -c Release "-p:PackedZplHelperVersion=$version" "-p:RestoreAdditionalProjectSources=$PWD/artifacts"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $assets = Get-Content -Raw tests/ZplHelper.Tests/obj/project.assets.json | ConvertFrom-Json -AsHashtable
+          if ($assets.libraries.Keys -match '^(SixLabors\.ImageSharp|BinaryKits\.Zpl\.(Viewer|Label))/') {
+            throw "The package still pulls in a legacy dependency."
+          }
+      - name: Upload tested package and symbols
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: nuget
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: nuget
+          path: artifacts
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push package and symbols to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
