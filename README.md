@@ -9,7 +9,7 @@ on Windows, Linux and macOS. CI runs on Windows and Linux.
 ## Rendering
 
 ```shell
-dotnet add package ZplHelper --version 0.1.0
+dotnet add package ZplHelper --version 0.2.0
 ```
 
 ```csharp
@@ -28,8 +28,8 @@ foreach (var label in analyzer.Analyze(zpl).LabelInfos)
 }
 ```
 
-Dimensions are in millimeters and density is in dots per millimeter. To match
-existing Primus labels, pass `(int)Math.Round(dpi / 25.4)`. The default PNG
+Dimensions are in millimeters and density is in dots per millimeter. To convert a
+printer resolution in dpi, pass `(int)Math.Round(dpi / 25.4)`. The default PNG
 background is transparent. Use a separate `PrinterStorage` and drawer for each
 concurrent job. Use the same storage for parsing and drawing to preserve
 downloaded graphics, formats and preloaded printer assets.
@@ -41,6 +41,11 @@ Set `FontManager.FontLoader` to control layout across platforms. Supply a
 stream-backed typeface such as one loaded with `SKTypeface.FromFile` for
 HarfBuzz shaping. On headless Linux the default font manager can fall back to
 the bundled DejaVu Sans Mono.
+
+Fonts P to V are rendered with the font 0 typeface like Zebra printers and
+labelary.com do. `^LT` is ignored by default because it usually compensates a
+printer specific media offset; set `ZplAnalyzer.ApplyLabelTop = true` to shift
+the content like labelary.com.
 
 ## Migration from BinaryKits.Zpl.Viewer
 

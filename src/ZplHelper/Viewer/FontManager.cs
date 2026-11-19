@@ -83,7 +83,7 @@ namespace BinaryKits.Zpl.Viewer
 
         public FontManager() {
             this.FontLoader = (fontName) => {
-                if (fontName == "0")
+                if (Helpers.FontScale.IsFont0Variant(fontName))
                 {
                     return this.Typeface0;
                 }

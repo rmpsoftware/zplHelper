@@ -51,6 +51,7 @@ namespace BinaryKits.Zpl.Viewer
             new Interleaved2of5BarcodeZplCommandAnalyzer(),
             new ImageMoveZplCommandAnalyzer(),
             new LabelHomeZplCommandAnalyzer(),
+            new LabelTopZplCommandAnalyzer(),
             new MaxiCodeBarcodeZplCommandAnalyzer(),
             new QrCodeBarcodeZplCommandAnalyzer(),
             new UpcABarcodeZplCommandAnalyzer(),
@@ -68,6 +69,17 @@ namespace BinaryKits.Zpl.Viewer
         private readonly IFormatMerger formatMerger;
         private const string labelStartCommand = "^XA";
         private const string labelEndCommand = "^XZ";
+
+        /// <summary>
+        /// Shift the label content by the ^LT label top offset like labelary.com does.
+        /// Disabled by default because ^LT typically compensates a printer specific media offset
+        /// and the printed result matches the unshifted layout.
+        /// </summary>
+        public bool ApplyLabelTop
+        {
+            get => this.virtualPrinter.ApplyLabelTop;
+            set => this.virtualPrinter.ApplyLabelTop = value;
+        }
 
         public ZplAnalyzer(IPrinterStorage printerStorage, IFormatMerger formatMerger = null)
         {

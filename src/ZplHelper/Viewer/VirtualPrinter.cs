@@ -8,6 +8,17 @@ namespace BinaryKits.Zpl.Viewer
     public class VirtualPrinter
     {
         public LabelHome LabelHomePosition { get; private set; }
+
+        /// <summary>
+        /// Vertical shift of the label content in dots (^LT)
+        /// </summary>
+        public int LabelTop { get; private set; }
+
+        /// <summary>
+        /// Whether ^LT shifts field positions. ^LT usually compensates a printer specific
+        /// media offset, so it is ignored by default.
+        /// </summary>
+        public bool ApplyLabelTop { get; set; }
         public LabelPosition NextElementPosition { get; private set; }
         public FieldDataBase NextElementFieldData { get; private set; }
         public FieldBlock NextElementFieldBlock { get; private set; }
@@ -164,6 +175,11 @@ namespace BinaryKits.Zpl.Viewer
         public void SetLabelHome(int x, int y)
         {
             this.LabelHomePosition = new LabelHome(x, y);
+        }
+
+        public void SetLabelTop(int labelTop)
+        {
+            this.LabelTop = labelTop;
         }
 
         public void AddComment(string comment)

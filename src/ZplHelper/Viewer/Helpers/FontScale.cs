@@ -17,7 +17,14 @@ namespace BinaryKits.Zpl.Viewer.Helpers
             ["F"] = (26, 13),
             ["G"] = (60, 40),
             ["H"] = (17, 11),
-            ["GS"] = (24, 24)
+            ["GS"] = (24, 24),
+            ["P"] = (20, 18),
+            ["Q"] = (28, 24),
+            ["R"] = (35, 31),
+            ["S"] = (40, 35),
+            ["T"] = (48, 42),
+            ["U"] = (59, 53),
+            ["V"] = (80, 71)
         };
 
         private static readonly FontScaleDictionary fontScales8mm = new()
@@ -120,17 +127,42 @@ namespace BinaryKits.Zpl.Viewer.Helpers
             return GetFontScale(fontName, printDensityDpmm)?.height * scalingFactor * heightScale;
         }
 
+        /// <summary>
+        /// Fonts P to V are fixed size variants of the scalable font 0 (CG Triumvirate Bold Condensed).
+        /// Zebra printers and labelary.com render them with the font 0 typeface.
+        /// </summary>
+        public static bool IsFont0Variant(string fontName)
+        {
+            return fontName is "0" or "P" or "Q" or "R" or "S" or "T" or "U" or "V";
+        }
+
+        // Bitmapped fonts are magnified by integer factors; ZPL rounds half-way values up.
+        private static int GetMagnification(int requested, int baseSize)
+        {
+            return (int)Math.Max(1, Math.Round((double)requested / baseSize, MidpointRounding.AwayFromZero));
+        }
+
         public static (float fontSize, float scaleX) GetFontScaling(string fontName, int fontHeight, int fontWidth, int printDensityDpmm)
         {
             (int height, int width)? fontScale = GetFontScale(fontName, printDensityDpmm);
+
+            if (fontScale != null && IsFont0Variant(fontName))
+            {
+                (int height, int width) = fontScale.Value;
+                int heightRatio = fontHeight > 0 ? GetMagnification(fontHeight, height) : fontWidth > 0 ? GetMagnification(fontWidth, width) : 1;
+                int widthRatio = fontWidth > 0 ? GetMagnification(fontWidth, width) : heightRatio;
+
+                // The font 0 typeface is drawn with width == height, so the base cell ratio becomes the horizontal scale.
+                float emSize = height * heightRatio;
+                return (emSize, (float)(width * widthRatio) / emSize);
+            }
 
             if (fontScale != null)
             {
                 (int height, int width) = fontScale.Value;
                 if (fontHeight > 0)
                 {
-                    double heightRatio = (double)fontHeight / height;
-                    int intHeightRatio = (int)Math.Max(1, Math.Round(heightRatio));
+                    int intHeightRatio = GetMagnification(fontHeight, height);
                     float emSize = height * intHeightRatio * heightScale;
 
                     if (fontWidth == 0)
@@ -138,15 +170,13 @@ namespace BinaryKits.Zpl.Viewer.Helpers
                         return (emSize, 1.0f);
                     }
 
-                    double widthRatio = (double)fontWidth / width;
-                    int intWidthRatio = (int)Math.Max(1, Math.Round(widthRatio));
+                    int intWidthRatio = GetMagnification(fontWidth, width);
 
                     return (emSize, (float)intWidthRatio / intHeightRatio);
                 }
                 else if (fontWidth > 0)
                 {
-                    double widthRatio = (double)fontWidth / width;
-                    int intWidthRatio = (int)Math.Max(1, Math.Round(widthRatio));
+                    int intWidthRatio = GetMagnification(fontWidth, width);
 
                     return (height * intWidthRatio * heightScale, 1.0f);
                 }

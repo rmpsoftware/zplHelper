@@ -50,7 +50,7 @@ namespace BinaryKits.Zpl.Viewer.ElementDrawers
                     text = text.ReplaceHexEscapes(hexIndicator, internationalFont);
                 }
 
-                if (font.FontName == "0")
+                if (FontScale.IsFont0Variant(font.FontName))
                 {
                     if (options.ReplaceDashWithEnDash)
                     {
@@ -141,8 +141,16 @@ namespace BinaryKits.Zpl.Viewer.ElementDrawers
                         this.skCanvas.SetMatrix(concatMatrix);
                     }
 
+                    int maxLineCount = Math.Max(1, fieldBlock.MaxLineCount);
+                    int lineIndex = 0;
                     foreach (string textLine in textLines)
                     {
+                        // ZPL overprints lines beyond the maximum line count on the last line of the block
+                        if (lineIndex++ >= maxLineCount)
+                        {
+                            y -= lineHeight;
+                        }
+
                         x = fieldBlock.PositionX + hangingIndent;
 
                         skFont.MeasureText(textLine, out SKRect textBounds);

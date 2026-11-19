@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <PackageId>ZplHelper</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>RMP Software and BinaryKits contributors</Authors>
     <Description>Render Zebra ZPL labels locally to PNG with SkiaSharp.</Description>
     <PackageTags>ZPL;Zebra;label;PNG;SkiaSharp</PackageTags>
@@ -28,6 +28,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Viewer/Resources/DejaVuSansMono.ttf" LogicalName="ZplHelper.DejaVuSansMono.ttf" />
     <EmbeddedResource Include="Viewer/Resources/ZplGS.ttf" LogicalName="ZplHelper.ZplGS.ttf" />
+    <InternalsVisibleTo Include="ZplHelper.Tests" />
     <None Include="../../LICENSE;../../README.md;../../NOTICE.md" Pack="true" PackagePath="/" />
     <None Include="../../licenses/DejaVu.txt" Pack="true" PackagePath="licenses/" />
   </ItemGroup>

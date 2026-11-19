@@ -62,7 +62,7 @@ namespace BinaryKits.Zpl.Viewer.ElementDrawers
                     displayText = displayText.ReplaceHexEscapes(hexIndicator, internationalFont);
                 }
 
-                if (font.FontName == "0")
+                if (FontScale.IsFont0Variant(font.FontName))
                 {
                     if (options.ReplaceDashWithEnDash)
                     {

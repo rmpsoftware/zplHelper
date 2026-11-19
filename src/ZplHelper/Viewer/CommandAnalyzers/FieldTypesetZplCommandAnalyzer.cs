@@ -68,6 +68,11 @@ namespace BinaryKits.Zpl.Viewer.CommandAnalyzers
                 y += virtualPrinter.LabelHomePosition.Y;
             }
 
+            if (virtualPrinter.ApplyLabelTop)
+            {
+                y += virtualPrinter.LabelTop;
+            }
+
             virtualPrinter.SetNextElementPosition(x, y, true, useDefaultPosition);
 
             return null;

@@ -4,6 +4,7 @@ using BinaryKits.Zpl.Label.Helpers;
 using BinaryKits.Zpl.Label.ImageConverters;
 using BinaryKits.Zpl.Viewer;
 using BinaryKits.Zpl.Viewer.ElementDrawers;
+using BinaryKits.Zpl.Viewer.Helpers;
 using NUnit.Framework;
 using SkiaSharp;
 using ZXing;
@@ -14,7 +15,7 @@ namespace ZplHelper.Tests;
 public class RenderingTests
 {
     [Test]
-    public void RendersUtf8FieldBlockAndScannableQrCodeAtPrimusDensity()
+    public void RendersUtf8FieldBlockAndScannableQrCodeAt12Dpmm()
     {
         const string payload = "ZPL-TEST-4711";
         const string zpl = $"""
@@ -147,6 +148,55 @@ public class RenderingTests
         var drawer = new ZplElementDrawer(storage, new DrawerOptions { PdfOutput = true });
         byte[] pdf = drawer.DrawPdf(label.ZplElements);
         Assert.That(pdf.Take(5), Is.EqualTo("%PDF-"u8.ToArray()));
+    }
+
+    [Test]
+    public void RendersRotatedFieldBlocksWithFontQOnSeparateColumns()
+    {
+        // Font Q is a font 0 variant; the text must fit a single 250 dot line and not spill into the next column.
+        const string zpl = """
+            ^XA^CI28
+            ^FO20,600^FB250,1^AQB,32,32^FDPrinted: 2030.01.01^FS
+            ^FO80,600^FB250,1^AQB,32,32^FDSample: ABC 000001^FS
+            ^XZ
+            """;
+        using var bitmap = SKBitmap.Decode(Render(new PrinterStorage(), zpl, new DrawerOptions { OpaqueBackground = true }));
+        Assert.That(HasInk(bitmap, new SKRectI(20, 600, 50, 851)), Is.True);
+        Assert.That(HasInk(bitmap, new SKRectI(51, 560, 79, 912)), Is.False);
+        Assert.That(HasInk(bitmap, new SKRectI(0, 851, 684, 912)), Is.False);
+        Assert.That(HasInk(bitmap, new SKRectI(0, 0, 684, 599)), Is.False);
+    }
+
+    [Test]
+    public void OverprintsFieldBlockLinesBeyondMaximumOnLastLine()
+    {
+        const string zpl = "^XA^FO20,20^A0N,30,30^FB200,2,0,L,0^FDone two three four five six seven eight nine ten^FS^XZ";
+        using var bitmap = SKBitmap.Decode(Render(new PrinterStorage(), zpl, new DrawerOptions { OpaqueBackground = true }));
+        Assert.That(HasInk(bitmap, new SKRectI(20, 50, 220, 80)), Is.True);
+        Assert.That(HasInk(bitmap, new SKRectI(0, 90, 684, 912)), Is.False);
+    }
+
+    [Test]
+    public void ScalesFont0VariantsLikeFont0WithBaseCellRatio()
+    {
+        // Q has a 28x24 cell; magnification rounds half-way values up (60 / 24 = 2.5 -> 3)
+        Assert.That(FontScale.GetFontScaling("Q", 32, 32, 12), Is.EqualTo((28f, 24f / 28f)));
+        Assert.That(FontScale.GetFontScaling("Q", 60, 60, 12), Is.EqualTo((56f, 72f / 56f)));
+    }
+
+    [Test]
+    public void IgnoresLabelTopUnlessRequested()
+    {
+        const string zpl = "^XA^LT47^FO10,10^GB20,20,20^FS^XZ";
+        var storage = new PrinterStorage();
+        using var ignored = SKBitmap.Decode(Render(storage, zpl));
+        Assert.That(ignored.GetPixel(15, 15), Is.EqualTo(SKColors.Black));
+
+        var analyzer = new ZplAnalyzer(storage) { ApplyLabelTop = true };
+        var label = analyzer.Analyze(zpl).LabelInfos.Single();
+        using var shifted = SKBitmap.Decode(new ZplElementDrawer(storage).Draw(label.ZplElements, 57.1, 76, 12));
+        Assert.That(shifted.GetPixel(15, 15).Alpha, Is.Zero);
+        Assert.That(shifted.GetPixel(15, 62), Is.EqualTo(SKColors.Black));
     }
 
     private static byte[] Render(PrinterStorage storage, string zpl, DrawerOptions? options = null)
